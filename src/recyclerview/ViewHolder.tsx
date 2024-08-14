@@ -1,4 +1,4 @@
-import { LayoutChangeEvent, View } from "react-native";
+import { View } from "react-native";
 import React, {
   RefObject,
   useCallback,
@@ -6,8 +6,15 @@ import React, {
   useMemo,
   useRef,
 } from "react";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import "react-native/Libraries/Core/setUpMutationObserver";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import MutationObserver from "react-native/Libraries/MutationObserver/MutationObserver";
 
 import { FlashListProps, RenderTarget } from "../FlashListProps";
+import CellContainer from "../native/cell-container/CellContainer";
 
 import { RVLayout } from "./LayoutManager";
 import { areDimensionsEqual } from "./utils/measureLayout";
@@ -38,6 +45,7 @@ const ViewHolderInternal = <TItem,>(props: ViewHolderProps<TItem>) => {
 
   useLayoutEffect(() => {
     refHolder.set(index, viewRef);
+    console.log("ViewHolder set ref", index);
     return () => {
       if (refHolder.get(index) === viewRef) {
         refHolder.delete(index);
@@ -45,25 +53,42 @@ const ViewHolderInternal = <TItem,>(props: ViewHolderProps<TItem>) => {
     };
   }, [index, refHolder]);
 
+  // useEffect(() => {
+  //   if (!viewRef.current) {
+  //     return;
+  //   }
+
+  //   const observer = new MutationObserver((mutations: any) => {
+  //     console.log("MutationObserver", mutations);
+  //   });
+
+  //   observer.observe(viewRef.current, {
+  //     subtree: true,
+  //     childList: true,
+  //   });
+  // }, []);
+
   const onLayout = useCallback(
-    (event: LayoutChangeEvent) => {
+    (event: any) => {
+      console.log("ViewHolder onLayout", index);
+      // console.log("a", event, layout);
       // height width don't match layot call
       if (
-        !areDimensionsEqual(layout.height, event.nativeEvent.layout.height) ||
-        !areDimensionsEqual(layout.width, event.nativeEvent.layout.width)
+        !areDimensionsEqual(layout.height, event.nativeEvent.height) ||
+        !areDimensionsEqual(layout.width, event.nativeEvent.width)
       ) {
-        const diff = layout.height - event.nativeEvent.layout.height;
+        const diff = layout.height - event.nativeEvent.height;
         if (Math.abs(diff) < 1) {
           console.log(
             "Layout height mismatch",
-            layout.height - event.nativeEvent.layout.height,
+            layout.height - event.nativeEvent.height,
             index
           );
         }
         onSizeChanged(index);
       }
     },
-    [index, layout.height, layout.width, onSizeChanged]
+    [index, onSizeChanged, layout]
   );
 
   console.log("ViewHolder re-render", index);
@@ -73,9 +98,15 @@ const ViewHolderInternal = <TItem,>(props: ViewHolderProps<TItem>) => {
   }, [item, index, extraData, target, renderItem]);
 
   return (
-    <View
+    <CellContainer
+      index={1}
       ref={viewRef}
       onLayout={onLayout}
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      // onBoundsChange={(event: any) => {
+      //   onLayout(event);
+      // }}
       style={{
         position: "absolute",
         width: layout.enforcedWidth ? layout.width : undefined,
@@ -89,7 +120,7 @@ const ViewHolderInternal = <TItem,>(props: ViewHolderProps<TItem>) => {
       }}
     >
       {children}
-    </View>
+    </CellContainer>
   );
 };
 
